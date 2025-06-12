@@ -88,38 +88,15 @@ class _MyHomePageState extends State<MyHomePage> {
   // 保存されたToDoタスクをJSONファイルから読み込む
   Future<void> _loadTodos() async {
     try {
-      // アプリケーションのドキュメントディレクトリを取得
-      final directory = await getApplicationDocumentsDirectory();
-      final file = File('${directory.path}/todo.json');
-      
-      // ファイルが存在する場合、内容を読み込む
-      if (await file.exists()) {
-        final contents = await file.readAsString();
-        setState(() {
-          _todos = List<Map<String, dynamic>>.from(json.decode(contents));
-          _sortTodos(); // 読み込み後にソート
-        });
-      } else {
-        // ドキュメントディレクトリにファイルが存在しない場合、初期データを読み込む
-        try {
-          final initialData = await rootBundle.loadString('lib/todo.json');
-          final decodedData = json.decode(initialData);
-          setState(() {
-            _todos = List<Map<String, dynamic>>.from(decodedData);
-            _sortTodos();
-          });
-          // 初期データをドキュメントディレクトリに保存
-          await file.writeAsString(initialData);
-        } catch (e) {
-          print('Error loading initial data: $e');
-          // 初期データの読み込みに失敗した場合、空のリストを設定
-          setState(() {
-            _todos = [];
-          });
-        }
-      }
+      // Webプラットフォームの場合は、直接初期データを読み込む
+      final initialData = await rootBundle.loadString('lib/todo.json');
+      final decodedData = json.decode(initialData);
+      setState(() {
+        _todos = List<Map<String, dynamic>>.from(decodedData);
+        _sortTodos();
+      });
     } catch (e) {
-      print('Error in _loadTodos: $e');
+      print('Error loading initial data: $e');
       setState(() {
         _todos = [];
       });
