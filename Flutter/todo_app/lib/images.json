@@ -1,0 +1,24 @@
+{
+  "images": [
+    {
+      "id": 1,
+      "path": "assets/images/image1.jpg",
+      "title": "画像1"
+    },
+    {
+      "id": 2,
+      "path": "assets/images/image2.jpg",
+      "title": "画像2"
+    },
+    {
+      "id": 3,
+      "path": "assets/images/image3.jpg",
+      "title": "画像3"
+    },
+    {
+      "id": 4,
+      "path": "assets/images/image4.jpg",
+      "title": "画像4"
+    }
+  ]
+}
