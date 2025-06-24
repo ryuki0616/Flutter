@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "264910741690",
+    "project_id": "school-app-1db46",
+    "storage_bucket": "school-app-1db46.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:264910741690:android:396cb6aeb5730f51eb2283",
+        "android_client_info": {
+          "package_name": "com.example.todo_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBRp6uVxTjWEgApCVyVxuJnVyoYc9A-RUg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
