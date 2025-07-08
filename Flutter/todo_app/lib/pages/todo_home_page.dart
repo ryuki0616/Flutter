@@ -13,6 +13,8 @@ import 'dart:async';
 // 画像選択用
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter/foundation.dart';
+// Firestoreをインポート
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 // ホームページのウィジェット（状態を持つウィジェット）
 class TodoHomePage extends StatefulWidget {
@@ -93,13 +95,14 @@ class _TodoHomePageState extends State<TodoHomePage> {
       final decodedData = json.decode(imageData);
       setState(() {
         _images = List<Map<String, dynamic>>.from(decodedData['images']);
-        print('読み込んだ画像数: ${_images.length}');
+        // 読み込んだ画像数をログ出力
+        debugPrint('読み込んだ画像数: ${_images.length}');
       });
       if (_images.isNotEmpty) {
         _startSlideShow();
       }
     } catch (e) {
-      print('画像情報の読み込みエラー: $e');
+      debugPrint('画像情報の読み込みエラー: $e');
       setState(() {
         _images = [];
       });
@@ -109,15 +112,15 @@ class _TodoHomePageState extends State<TodoHomePage> {
   void _startSlideShow() {
     _timer?.cancel();  // 既存のタイマーをキャンセル
     if (_images.isEmpty) {
-      print('画像が読み込まれていません');
+      debugPrint('画像が読み込まれていません');
       return;
     }
-    print('スライドショーを開始します');
+    debugPrint('スライドショーを開始します');
     _timer = Timer.periodic(const Duration(seconds: 2), (timer) {
       if (mounted) {  // ウィジェットがマウントされているか確認
         setState(() {
           _currentImageIndex = (_currentImageIndex + 1) % _images.length;
-          print('画像を切り替え: $_currentImageIndex');
+          debugPrint('画像を切り替え: $_currentImageIndex');
         });
       }
     });
@@ -132,40 +135,75 @@ class _TodoHomePageState extends State<TodoHomePage> {
         _emailAddress = config['email'] ?? '';
       });
     } catch (e) {
-      print('設定ファイルの読み込みエラー: $e');
+      debugPrint('設定ファイルの読み込みエラー: $e');
       setState(() {
         _emailAddress = '';
       });
     }
   }
 
-  // 保存されたToDoタスクをJSONファイルから読み込む
+  // FirestoreからToDoタスクを読み込む
   Future<void> _loadTodos() async {
     try {
-      final initialData = await rootBundle.loadString('lib/todo.json');
-      final decodedData = json.decode(initialData);
+      final snapshot = await FirebaseFirestore.instance.collection('todos').get();
       setState(() {
-        _todos = List<Map<String, dynamic>>.from(decodedData);
+        _todos = snapshot.docs.map((doc) {
+          final data = doc.data();
+          return {
+            'id': doc.id,
+            'title': data['title'] ?? '',
+            'date': data['date'] ?? '',
+            'completed': data['completed'] ?? false,
+          };
+        }).toList();
         _sortTodos();
       });
     } catch (e) {
-      print('初期データの読み込みエラー: $e');
+      debugPrint('Firestoreからの読み込みエラー: $e');
       setState(() {
         _todos = [];
       });
     }
   }
 
-  // ToDoタスクをJSONファイルに保存
+  // FirestoreにToDoタスクを保存
   Future<void> _saveTodos() async {
     try {
-      // アプリケーションのドキュメントディレクトリを取得
-      final directory = await getApplicationDocumentsDirectory();
-      final file = File('${directory.path}/todo.json');
-      // タスクリストをJSON形式で保存
-      await file.writeAsString(json.encode(_todos));
+      final collection = FirebaseFirestore.instance.collection('todos');
+      // 既存の全タスクを一度削除（簡易実装）
+      final snapshot = await collection.get();
+      for (final doc in snapshot.docs) {
+        await doc.reference.delete();
+      }
+      // 現在のリストを全て保存
+      for (final todo in _todos) {
+        await collection.add({
+          'title': todo['title'],
+          'date': todo['date'],
+          'completed': todo['completed'],
+        });
+      }
     } catch (e) {
-      print('Error saving todos: $e');
+      debugPrint('Firestoreへの保存エラー: $e');
+    }
+  }
+
+  // タスク追加時はFirestoreにも追加
+  Future<void> _addTodo(Map<String, dynamic> newTodo) async {
+    try {
+      final docRef = await FirebaseFirestore.instance.collection('todos').add({
+        'title': newTodo['title'],
+        'date': newTodo['date'],
+        'completed': newTodo['completed'],
+      });
+      setState(() {
+        _todos.add({
+          ...newTodo,
+          'id': docRef.id,
+        });
+      });
+    } catch (e) {
+      debugPrint('Firestoreへの追加エラー: $e');
     }
   }
 
@@ -186,7 +224,7 @@ class _TodoHomePageState extends State<TodoHomePage> {
         _emailAddress = email;
       });
     } catch (e) {
-      print('メールアドレスの保存エラー: $e');
+      debugPrint('メールアドレスの保存エラー: $e');
     }
   }
 
@@ -283,7 +321,7 @@ class _TodoHomePageState extends State<TodoHomePage> {
         }
       }
     } catch (e) {
-      print('画像アップロードエラー: $e');
+      debugPrint('画像アップロードエラー: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -334,7 +372,7 @@ class _TodoHomePageState extends State<TodoHomePage> {
         );
       }
     } catch (e) {
-      print('画像削除エラー: $e');
+      debugPrint('画像削除エラー: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -353,9 +391,9 @@ class _TodoHomePageState extends State<TodoHomePage> {
       final file = File('${directory.path}/images.json');
       final imageData = json.encode({'images': _images});
       await file.writeAsString(imageData);
-      print('画像情報を保存しました: ${_images.length}枚');
+              debugPrint('画像情報を保存しました: ${_images.length}枚');
     } catch (e) {
-      print('画像情報の保存エラー: $e');
+              debugPrint('画像情報の保存エラー: $e');
       throw Exception('画像情報の保存に失敗しました');
     }
   }
@@ -376,7 +414,7 @@ class _TodoHomePageState extends State<TodoHomePage> {
             mainAxisSize: MainAxisSize.min,
             children: [
               // 画像一覧
-              Container(
+              SizedBox(
                 height: 200,
                 child: ListView.builder(
                   itemCount: _images.length,
@@ -398,7 +436,7 @@ class _TodoHomePageState extends State<TodoHomePage> {
                               height: 50,
                               fit: BoxFit.cover,
                               errorBuilder: (context, error, stackTrace) {
-                                print('サムネイル読み込みエラー: $error');
+                                debugPrint('サムネイル読み込みエラー: $error');
                                 return Container(
                                   width: 50,
                                   height: 50,
@@ -541,7 +579,7 @@ class _TodoHomePageState extends State<TodoHomePage> {
                               width: double.infinity,
                               height: double.infinity,
                               errorBuilder: (context, error, stackTrace) {
-                                print('画像読み込みエラー: $error');
+                                debugPrint('画像読み込みエラー: $error');
                                 return Container(
                                   color: Colors.grey[300],
                                   child: const Center(
@@ -557,7 +595,7 @@ class _TodoHomePageState extends State<TodoHomePage> {
                               width: double.infinity,
                               height: double.infinity,
                               errorBuilder: (context, error, stackTrace) {
-                                print('画像読み込みエラー: $error');
+                                debugPrint('画像読み込みエラー: $error');
                                 return Container(
                                   color: Colors.grey[300],
                                   child: const Center(
@@ -630,11 +668,8 @@ class _TodoHomePageState extends State<TodoHomePage> {
               onPressed: () async {
                 final newTodo = await _showAddTodoDialog();
                 if (newTodo != null) {
-                  setState(() {
-                    _todos.add(newTodo);
-                    _filterBy = 'all';
-                  });
-                  _saveTodos();
+                  await _addTodo(newTodo);
+                  _filterBy = 'all';
                 }
               },
               style: ElevatedButton.styleFrom(
@@ -700,10 +735,10 @@ class _TodoHomePageState extends State<TodoHomePage> {
                       leading: Checkbox(
                         value: todo['completed'],
                         onChanged: (bool? value) {
-                          _toggleTodo(index);
+                          _toggleTodoFirestore(index);
                         },
-                        fillColor: MaterialStateProperty.resolveWith<Color>((Set<MaterialState> states) {
-                          if (states.contains(MaterialState.selected)) {
+                        fillColor: WidgetStateProperty.resolveWith<Color>((Set<WidgetState> states) {
+                          if (states.contains(WidgetState.selected)) {
                             return Colors.white;
                           }
                           return Colors.white;
@@ -712,7 +747,7 @@ class _TodoHomePageState extends State<TodoHomePage> {
                       ),
                       trailing: IconButton(
                         icon: const Icon(Icons.delete, color: Colors.white),
-                        onPressed: () => _deleteTodo(index),
+                        onPressed: () => _deleteTodoFirestore(index),
                       ),
                     ),
                   );
@@ -722,14 +757,14 @@ class _TodoHomePageState extends State<TodoHomePage> {
     );
   }
 
-  void _toggleTodo(int index) {
+  void _toggleTodoFirestore(int index) {
     setState(() {
       _todos[index]['completed'] = !_todos[index]['completed'];
     });
     _saveTodos();
   }
 
-  void _deleteTodo(int index) {
+  void _deleteTodoFirestore(int index) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -761,8 +796,8 @@ class _TodoHomePageState extends State<TodoHomePage> {
   Future<Map<String, dynamic>?> _showAddTodoDialog() async {
     _titleController.clear();
     _selectedDate = DateTime.now();
-    final _hourController = TextEditingController(text: _selectedDate.hour.toString());
-    final _minuteController = TextEditingController(text: _selectedDate.minute.toString());
+    final hourController = TextEditingController(text: _selectedDate.hour.toString());
+    final minuteController = TextEditingController(text: _selectedDate.minute.toString());
 
     return showDialog<Map<String, dynamic>>(
       context: context,
@@ -838,7 +873,7 @@ class _TodoHomePageState extends State<TodoHomePage> {
                 children: [
                   Expanded(
                     child: TextField(
-                      controller: _hourController,
+                      controller: hourController,
                       style: const TextStyle(color: Colors.white),
                       keyboardType: TextInputType.number,
                       decoration: const InputDecoration(
@@ -856,7 +891,7 @@ class _TodoHomePageState extends State<TodoHomePage> {
                   const SizedBox(width: 16),
                   Expanded(
                     child: TextField(
-                      controller: _minuteController,
+                      controller: minuteController,
                       style: const TextStyle(color: Colors.white),
                       keyboardType: TextInputType.number,
                       decoration: const InputDecoration(
@@ -888,8 +923,8 @@ class _TodoHomePageState extends State<TodoHomePage> {
             TextButton(
               onPressed: () {
                 if (_titleController.text.isNotEmpty) {
-                  final hour = int.tryParse(_hourController.text) ?? 0;
-                  final minute = int.tryParse(_minuteController.text) ?? 0;
+                  final hour = int.tryParse(hourController.text) ?? 0;
+                  final minute = int.tryParse(minuteController.text) ?? 0;
                   final newTodo = {
                     'title': _titleController.text,
                     'date': DateTime(
