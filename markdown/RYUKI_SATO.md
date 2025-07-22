@@ -204,4 +204,140 @@ final controller = TextEditingController()
 
 ---
 
+## アロー関数（=>）について
+
+アロー関数は、Dartで使える短い無名関数（ラムダ式）の書き方です。主に1行で簡潔に処理を記述したい場合に使われます。
+
+### 特徴
+- `=>`（ファットアロー）を使って、1行の処理を簡単に書ける
+- 戻り値が自動的にその式の値になる
+- コールバックや短い関数でよく使われる
+
+### 使い方例
+```dart
+// 通常の無名関数
+var list = [1, 2, 3];
+var doubled = list.map((x) {
+  return x * 2;
+});
+
+// アロー関数を使うと
+var doubled = list.map((x) => x * 2);
+```
+
+### Flutterでの例
+```dart
+ElevatedButton(
+  onPressed: () => print('ボタンが押されました'),
+  child: Text('押す'),
+)
+```
+
+### 注意点
+- アロー関数は1行の式しか書けません。複数行の処理が必要な場合は通常の波括弧（{}）を使います。
+
+```dart
+// アロー関数（1行のみ）
+() => print('Hello');
+
+// 通常の無名関数（複数行）
+() {
+  print('Hello');
+  print('World');
+};
+```
+
+---
+
+## Flutterのダイアログについて
+
+Flutterでは、ユーザーにメッセージを表示したり、確認・選択を促すためにダイアログ（ポップアップ）を表示できます。
+
+### 主なダイアログの種類
+- **AlertDialog**：確認や警告、簡単な入力などによく使われる標準的なダイアログ
+- **SimpleDialog**：選択肢をリスト表示するシンプルなダイアログ
+- **showDialog**：ダイアログを表示するための関数（上記のダイアログを表示する際に使う）
+
+### AlertDialogの例
+```dart
+showDialog(
+  context: context,
+  builder: (context) {
+    return AlertDialog(
+      title: Text('確認'),
+      content: Text('本当に削除しますか？'),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text('キャンセル'),
+        ),
+        ElevatedButton(
+          onPressed: () {
+            // 削除処理
+            Navigator.pop(context);
+          },
+          child: Text('削除'),
+        ),
+      ],
+    );
+  },
+);
+```
+
+### SimpleDialogの例
+```dart
+showDialog(
+  context: context,
+  builder: (context) {
+    return SimpleDialog(
+      title: Text('選択してください'),
+      children: [
+        SimpleDialogOption(
+          onPressed: () => Navigator.pop(context, 'A'),
+          child: Text('A'),
+        ),
+        SimpleDialogOption(
+          onPressed: () => Navigator.pop(context, 'B'),
+          child: Text('B'),
+        ),
+      ],
+    );
+  },
+);
+```
+
+### カスタムダイアログの例
+`showDialog`の`builder`で独自のWidgetを返すことで、自由にカスタマイズしたダイアログも作成できます。
+
+```dart
+showDialog(
+  context: context,
+  builder: (context) {
+    return Dialog(
+      child: Padding(
+        padding: EdgeInsets.all(24.0),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('カスタムダイアログ'),
+            SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text('閉じる'),
+            ),
+          ],
+        ),
+      ),
+    );
+  },
+);
+```
+
+### 注意点
+- `showDialog`は非同期関数なので、`await`で結果を受け取ることができます。
+- ダイアログの外側をタップすると閉じるのがデフォルトですが、`barrierDismissible: false`で無効化できます。
+- ダイアログ内で`Navigator.pop(context)`を呼ぶことで閉じます。
+
+---
+
 
